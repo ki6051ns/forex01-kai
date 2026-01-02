@@ -81,25 +81,34 @@ LAG_RANGE = range(1,6)
 ########################################################################################3
 
 def loadSQL(date, tenor,pricing_source ):
-    date = date.strftime("%Y-%m-%d")
-    mydb = mysql.connector.connect( host="sysmacdb02.crxghxjqjbjr.ap-northeast-1.rds.amazonaws.com",port=3306, user="nakafx", password="fxnaka",  database="AlphaX")
-    mycursor = mydb.cursor()
-    sql = "SELECT * FROM forex_rates WHERE date > '" + date + "' AND tenor = '" +  tenor +"' AND pricing_source = '"+ pricing_source + "';" # + date + " LIMIT 10;"
-    mycursor.execute( sql )
-    ret_ = pd.DataFrame(mycursor.fetchall())
-    if len(ret_) == 0:
-        return pd.DataFrame()
-    ret_.columns = mycursor.column_names
-    mycursor.close()
-
-    CCY = [ 'date','AUDUSD','USDCAD','USDCHF','EURUSD','GBPUSD','NZDUSD','USDJPY']
-    ret_["mid"] = ret_["last"] 
-    df = ret_[["date","forex","mid"]].pivot(index='date', columns='forex', values='mid').reset_index()[CCY]
-    for ccy in ["USDCAD" ,"USDCHF","USDJPY"]:
-        df[ccy]  = 1/df[ccy]
-    df.columns = ['date_time','AUDUSD','CADUSD','CHFUSD','EURUSD','GBPUSD','NZDUSD','JPYUSD']
-    df["date_time"] = pd.to_datetime(df["date_time"])
-    return df
+    """
+    MySQLデータベースから為替レートを読み込む関数
+    
+    ⚠️ セキュリティ警告: 認証情報は環境変数から取得してください
+    現在は未使用のため、空のDataFrameを返します。
+    
+    環境変数（将来使用する場合）:
+        MYSQL_HOST: データベースホスト
+        MYSQL_PORT: ポート番号（デフォルト: 3306）
+        MYSQL_USER: ユーザー名
+        MYSQL_PASSWORD: パスワード
+        MYSQL_DATABASE: データベース名
+    
+    使用例（環境変数を使用）:
+        import os
+        import mysql.connector
+        
+        host = os.getenv("MYSQL_HOST")
+        port = int(os.getenv("MYSQL_PORT", "3306"))
+        user = os.getenv("MYSQL_USER")
+        password = os.getenv("MYSQL_PASSWORD")
+        database = os.getenv("MYSQL_DATABASE")
+        
+        mydb = mysql.connector.connect(host=host, port=port, user=user, password=password, database=database)
+    """
+    # 現在は未使用のため、空のDataFrameを返す
+    # 認証情報のハードコードを避けるため、実装はコメントアウト
+    return pd.DataFrame()
 
 def imputation(fwdRate_,spotRate_):
     for currency_ in fwdRate_.columns.drop("date_time"):
