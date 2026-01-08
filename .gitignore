@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Data / Generated files (large files)
+data/
+*.parquet
+*.zip
+*.csv.bak
+
+# Outputs (generated)
+train/output/
+test/output/
+
+# Snapshots generated from sec1 (keep canonical ones, ignore generated)
+train/input/market/*_from_sec1.csv
+
+# OS/Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
