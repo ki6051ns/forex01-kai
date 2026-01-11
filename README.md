@@ -103,11 +103,30 @@ python scripts/check_use_fast.py
 
 **入力**: `D:\forex03_data2\histdata_raw\{CURRENCY}\sec1\HISTDATA_COM_NT_{CURRENCY}_T_*.zip`  
 **出力**: 
-- `data/sec1_parquet/{CURRENCY}_sec1_{YYYYMM}.parquet`
+- `D:\forex01_data\sec1_parquet\{CURRENCY}_sec1_{YYYYMM}.parquet`
 - `train/input/market/spot_rates_tk20_from_sec1.csv`
 - `train/input/market/spot_rates_ny17_from_sec1.csv`
 
 ### 🚀 実行手順（コピペ用）
+
+#### Step 0: データディレクトリの準備（初回のみ）
+
+**注意**: `sec1_parquet`ディレクトリはCursorのSync負荷軽減のため、Dドライブに配置します。
+
+**既存データを移動する場合（PowerShell）:**
+```powershell
+# ディレクトリ作成
+New-Item -ItemType Directory -Path "D:\forex01_data\sec1_parquet" -Force
+
+# 既存データを移動（repo配下からDドライブへ）
+Move-Item -Path "data\sec1_parquet\*" -Destination "D:\forex01_data\sec1_parquet\" -Force
+
+# 空のディレクトリを削除（オプション）
+Remove-Item -Path "data\sec1_parquet" -Force -ErrorAction SilentlyContinue
+```
+
+**新規セットアップの場合:**
+- ディレクトリは自動生成されます（スクリプト実行時に`mkdir(parents=True, exist_ok=True)`で作成）
 
 #### Step 1: HistData ZIP → Parquet変換
 
@@ -142,10 +161,10 @@ python scripts/import_histdata_sec1.py \
 
 ```powershell
 # EURUSD単月の例
-python scripts/generate_daily_snapshots.py --currency EURUSD --parquet-root "data/sec1_parquet" --output-root "train/input/market"
+python scripts/generate_daily_snapshots.py --currency EURUSD --parquet-root "D:\forex01_data\sec1_parquet" --output-root "train/input/market"
 
 # 全通貨
-python scripts/generate_daily_snapshots.py --parquet-root "data/sec1_parquet" --output-root "train/input/market"
+python scripts/generate_daily_snapshots.py --parquet-root "D:\forex01_data\sec1_parquet" --output-root "train/input/market"
 ```
 
 **bash（Linux/Mac）の場合:**
@@ -154,12 +173,12 @@ python scripts/generate_daily_snapshots.py --parquet-root "data/sec1_parquet" --
 # EURUSD単月の例
 python scripts/generate_daily_snapshots.py \
     --currency EURUSD \
-    --parquet-root "data/sec1_parquet" \
+    --parquet-root "D:\forex01_data\sec1_parquet" \
     --output-root "train/input/market"
 
 # 全通貨
 python scripts/generate_daily_snapshots.py \
-    --parquet-root "data/sec1_parquet" \
+    --parquet-root "D:\forex01_data\sec1_parquet" \
     --output-root "train/input/market"
 ```
 
@@ -352,7 +371,196 @@ MAX (abs diff): 0.00012345
 
 ---
 
+## ✅ 3rd_commit: データソース切替機能（Implemented）
+
+### 🔄 動的データソース切替
+
+**実装内容**:
+- `lib.py`: `init_spot_globals()`関数を追加し、実行時にspotデータソースを切替可能に
+- `test_prod.py`, `train.py`: 環境変数`SPOT_SUFFIX`によるspotデータ切替対応
+- 段階的なデータ移行に対応（段階1: testのみ新データ、段階2: trainから新データ）
+
+**機能**:
+- 環境変数`SPOT_SUFFIX`でspotファイルのサフィックスを指定
+  - `SPOT_SUFFIX=""`: 旧データ（`spot_rates_*.csv`）
+  - `SPOT_SUFFIX="_from_sec1"`: 新データ（`spot_rates_*_from_sec1.csv`）
+- `lib.init_spot_globals(spot_suffix)`でグローバル変数を再初期化
+- ログ出力（`[SPOT] loading: ...`）で使用中のファイルを確認可能
+
+**使用方法**:
+```powershell
+# 新データでtest_prod.pyを実行
+$env:SPOT_SUFFIX = "_from_sec1"
+python test_prod.py 2025-05-20
+
+# 新データでtrain.pyを実行
+$env:SPOT_SUFFIX = "_from_sec1"
+python train.py
+```
+
+### 📊 比較スクリプト拡張
+
+**実装内容**:
+- `tools/compare_performance.py`: `performance_summary_*.csv`形式に対応
+- `--type`オプション追加（`auto`, `performance`, `summary`）
+- 自動判定機能（ファイル名に`performance_summary`が含まれる場合は`summary`として扱う）
+
+**評価指標**:
+- `performance_*.csv`: 日別の`total`列の差分（MAE, RMSE, MAX）
+- `performance_summary_*.csv`: 年別の各指標列（sum, mean, std, sr, mdd, sortino）の差分（MAE, RMSE, MAX）
+
+**使用方法**:
+```powershell
+# performance_*.csv を比較
+python tools\compare_performance.py --ref "D:\forex\all_spot_TK20\program6\test\output\performance\performance_20250520.csv" --new "test\output\performance\performance_20250520.csv"
+
+# performance_summary_*.csv を比較
+python tools\compare_performance.py --ref "D:\forex\all_spot_TK20\program6\test\output\performance\performance_summary_20250520.csv" --new "test\output\performance\performance_summary_20250520.csv" --type summary
+```
+
+### 🐛 バグ修正
+
+**実装内容**:
+- `lib.py`: `performanceSummary()`関数の`groupby().agg()`でdatetime列が混入する問題を修正
+- `lib.py`: `mdd`関数をSeriesを受け取るように修正（DataFrame処理のエラーを回避）
+
+**修正内容**:
+- `groupby("year")[["pl"]].agg(...)`で数値列のみを集計対象に
+- `groupby("year")["pl"].apply(mdd).to_frame()`でSeries処理に統一
+
+### ✅ Done条件（3rd_commitの合格ライン）
+
+- ✅ `SPOT_SUFFIX`環境変数によるspotデータ切替が動作する
+- ✅ `test_prod.py`を新データで実行可能（段階1）
+- ✅ `performance_summary_*.csv`の比較が可能
+- ✅ READMEにデータソース切替手順が記載されている
+- ✅ バグ修正により`test_prod.py`が正常に完了する
+
+---
+
+## 🔄 Ground Truth再現手順
+
+### 目的
+
+Ground Truth（参照系）から同じ結果を再現する。以下2つの参照系を再現可能にする：
+- **18th_commit（Forward）**: `D:\forex\18th_commit\program6`
+- **all_spot_TK20（Spot/TK20）**: `D:\forex\all_spot_TK20\program6`
+
+### 実行方法
+
+#### 方法1: PowerShellスクリプト（推奨）
+
+```powershell
+# 18th_commit を再現
+.\tools\reproduce_ground_truth.ps1 -GroundTruth "18th_commit" -Date "2025-05-20"
+
+# all_spot_TK20 を再現
+.\tools\reproduce_ground_truth.ps1 -GroundTruth "all_spot_TK20" -Date "2025-05-20"
+```
+
+**注意**: `test_prod.py`は火曜日のみ実行されます。日付を確認してください。
+
+#### 方法2: 手動実行
+
+詳細は `tools/REPRODUCTION_STEPS.md` を参照してください。
+
+### 比較スクリプト
+
+```powershell
+# performance_*.csv を比較
+python tools\compare_performance.py --ref "D:\forex\18th_commit\program6\test\output\performance\performance_20250520.csv" --new "test\output\performance\performance_20250520.csv"
+
+# performance_summary_*.csv を比較（--type summary を指定）
+python tools\compare_performance.py --ref "D:\forex\all_spot_TK20\program6\test\output\performance\performance_summary_20250520.csv" --new "test\output\performance\performance_summary_20250520.csv" --type summary
+```
+
+**PASS条件**: `max_abs_diff <= 1e-12`
+
+---
+
+## 📊 データソース切替（新データ評価）
+
+### 段階1: testのみ新データで実行
+
+**目的**: 新spotデータ（`_from_sec1.csv`）を使用して`test_prod.py`を実行し、結果を確認する。
+
+**実行コマンド**:
+
+```powershell
+# 環境変数を設定してtest_prod.pyを実行
+$env:SPOT_SUFFIX = "_from_sec1"
+python test_prod.py 2025-05-20
+```
+
+**出力先**（この2つが"成功判定"）:
+
+- `test/output/performance/performance_20250520.csv`
+- `test/output/performance/performance_summary_20250520.csv`
+
+**確認ポイント**:
+
+- コンソールに `[RUN] SPOT_SUFFIX='_from_sec1'` が表示される
+- コンソールに `[SPOT] loading: market/spot_rates_*_from_sec1.csv` が表示される
+- 上記2つのCSVファイルが生成される
+
+**注意**: `test_prod.py`は火曜日のみ実行されます。日付を確認してください。
+
+### 段階2: trainから新データで作り直す
+
+**目的**: 新spotデータで`train.py`を実行し、その結果を使って`test_prod.py`も実行する。
+
+**実行コマンド**:
+
+```powershell
+# trainを新spotで実行
+$env:SPOT_SUFFIX = "_from_sec1"
+python train.py
+
+# train結果をtestにコピー（既存の流れに従う）
+# train/output/summary/train_result_*.csv を test/input/input_by_train/ にコピー
+
+# testを実行（環境変数は設定済み）
+python test_prod.py 2025-05-20
+```
+
+### 比較スクリプト（新データ評価）
+
+```powershell
+# performance_*.csv を比較（旧spot vs 新spot）
+python tools\compare_performance.py --ref "D:\forex\all_spot_TK20\program6\test\output\performance\performance_20250520.csv" --new "test\output\performance\performance_20250520.csv"
+
+# performance_summary_*.csv を比較（旧spot vs 新spot）
+python tools\compare_performance.py --ref "D:\forex\all_spot_TK20\program6\test\output\performance\performance_summary_20250520.csv" --new "test\output\performance\performance_summary_20250520.csv" --type summary
+```
+
+**評価指標**:
+
+- **MAE**: Mean Absolute Error（平均絶対誤差）
+- **RMSE**: Root Mean Squared Error（二乗平均平方根誤差）
+- **MAX**: 最大絶対誤差
+- 日付は**intersection（共通日）**に揃える
+
+### トラブルシューティング
+
+不一致が発生した場合の確認順序：
+
+1. **`lib.py`の`INPUTPATH`確認**: `test\input\`を指しているか
+2. **入力データの完全一致確認**: 行数・ハッシュ値の確認
+3. **時刻基準の確認**: `test_prod.py`が同じ時刻基準（NY17/TK20）を呼んでいるか
+4. **依存パッケージのバージョン差**: pandas/numpyバージョンの確認
+5. **並列処理やソート順の違い**: rank tieの扱い等
+
+詳細は `tools/REPRODUCTION_STEPS.md` を参照してください。
+
+---
+
 ## 📅 Planned (next commit)
+
+### 4th_commit予定
+
+- 段階2の実装完了（trainから新データで作り直す）
+- 新データでのtrain結果とtest結果の検証
+- パフォーマンス指標の詳細比較と評価基準の確立
 
 ---
 
@@ -393,7 +601,7 @@ forex01-kai/
 │   └── output/                     # テスト結果
 │
 └── data/                           # データ（2nd_commit予定）
-    └── sec1_parquet/               # Parquetファイル保存先
+    # 注意: sec1_parquetはD:\forex01_data\sec1_parquetに移動済み（CursorのSync負荷軽減のため）
 ```
 
 ## 📁 プロジェクト構造
@@ -432,7 +640,7 @@ forex01-kai/
 │   └── output/                     # テスト結果
 │
 └── data/                           # データ（新規）
-    └── sec1_parquet/               # Parquetファイル保存先
+    # 注意: sec1_parquetはD:\forex01_data\sec1_parquetに移動済み（CursorのSync負荷軽減のため）
 ```
 
 ## 🚀 クイックスタート（1st_commit）
@@ -586,6 +794,7 @@ python train.py
 - `scripts/VERIFICATION.md`: 検証手順の詳細
 - `scripts/QUICK_START.md`: クイックスタートガイド
 - `scripts/REGRESSION_TEST_STEPS.md`: 回帰テスト手順
+- `tools/REPRODUCTION_STEPS.md`: Ground Truth再現手順の詳細
 - `プロジェクト構造説明.md`: プロジェクト構造の詳細
 
 ## 🎉 1st_commit サマリー

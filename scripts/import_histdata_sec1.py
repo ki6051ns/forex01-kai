@@ -8,7 +8,7 @@
       └─ HISTDATA_COM_NT_EURUSD_T_LASTYYYYMM.zip
 
 出力:
-    data/sec1_parquet/EURUSD_sec1_YYYYMM.parquet
+    D:\forex01_data\sec1_parquet\EURUSD_sec1_YYYYMM.parquet
 
 列:
     timestamp_utc, bid, ask, mid, last
@@ -27,7 +27,7 @@ warnings.simplefilter('ignore')
 
 # 設定
 HISTDATA_ROOT = r"D:\forex03_data2\histdata_raw"
-OUTPUT_ROOT = "data/sec1_parquet"
+OUTPUT_ROOT = r"D:\forex01_data\sec1_parquet"
 CURRENCIES = ['EURUSD', 'GBPUSD', 'AUDUSD', 'NZDUSD', 'USDJPY', 'USDCAD', 'USDCHF']
 USE_LAST_AS_FALLBACK = True  # 欠損時にlastを使用するか
 

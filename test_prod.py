@@ -12,6 +12,10 @@ TUESDAY  = 1
 if os.path.exists(lib.DIRECTORY+"test/output/prod/.gitignore"):
     os.remove(lib.DIRECTORY+"test/output/prod/.gitignore")
 
+# Spot suffix切替（段階1：testだけ新データ）
+spot_suffix = os.getenv("SPOT_SUFFIX", "")
+lib.init_spot_globals(spot_suffix)
+print(f"[RUN] SPOT_SUFFIX={spot_suffix!r}")
 
 date_  =  pd.to_datetime(sys.argv[1])
 date_  =  date_ + relativedelta(hours=16, minutes=30)

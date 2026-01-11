@@ -37,7 +37,7 @@ except ImportError:
         raise ImportError("zoneinfo (Python 3.9+) or pytz is required. Install with: pip install pytz")
 
 # 設定
-PARQUET_ROOT = "data/sec1_parquet"
+PARQUET_ROOT = r"D:\forex01_data\sec1_parquet"
 OUTPUT_ROOT = "train/input/market"
 
 # 通貨ペア正規化ルールをインポート
@@ -295,6 +295,8 @@ def generate_all_snapshots(parquet_root: str, output_root: str):
     tk20_file = output_dir / "spot_rates_tk20_from_sec1.csv"
     # NY17: ニューヨーク時間17:00、月曜日
     ny17_file = output_dir / "spot_rates_ny17_from_sec1.csv"
+    # TK1630: 東京時間16:30、火曜日
+    tk1630_file = output_dir / "spot_rates_tk1630_from_sec1.csv"
     
     # 各通貨ペアを処理
     for currency in CURRENCIES:
@@ -331,6 +333,21 @@ def generate_all_snapshots(parquet_root: str, output_root: str):
             target_minute=0,
             weekday=0,  # 月曜日
         )
+        
+        # TK1630スナップショット生成
+        if USE_ZONEINFO:
+            tk1630_tz = ZoneInfo('Asia/Tokyo')
+        else:
+            tk1630_tz = pytz.timezone('Asia/Tokyo')
+        generate_daily_snapshots(
+            currency=currency,
+            parquet_root=parquet_root,
+            output_file=str(tk1630_file),
+            target_tz=tk1630_tz,
+            target_hour=16,
+            target_minute=30,
+            weekday=1,  # 火曜日
+        )
 
 
 def main():
@@ -357,6 +374,7 @@ def main():
     
     tk20_file = output_dir / "spot_rates_tk20_from_sec1.csv"
     ny17_file = output_dir / "spot_rates_ny17_from_sec1.csv"
+    tk1630_file = output_dir / "spot_rates_tk1630_from_sec1.csv"
     
     for currency in currencies:
         # 通貨ペアのルールを取得
@@ -391,6 +409,21 @@ def main():
             target_hour=17,
             target_minute=0,
             weekday=0,
+        )
+        
+        # TK1630
+        if USE_ZONEINFO:
+            tk1630_tz = ZoneInfo('Asia/Tokyo')
+        else:
+            tk1630_tz = pytz.timezone('Asia/Tokyo')
+        generate_daily_snapshots(
+            currency=currency,
+            parquet_root=args.parquet_root,
+            output_file=str(tk1630_file),
+            target_tz=tk1630_tz,
+            target_hour=16,
+            target_minute=30,
+            weekday=1,  # 火曜日
         )
     
     print("Snapshot generation completed!")

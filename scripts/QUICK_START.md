@@ -45,7 +45,7 @@ python scripts/import_histdata_sec1.py \
 # 2. スナップショット生成
 python scripts/generate_daily_snapshots.py \
     --currency EURUSD \
-    --parquet-root data/sec1_parquet \
+    --parquet-root D:/forex01_data/sec1_parquet \
     --output-root train/input/market
 
 # 3. タイムゾーン検証

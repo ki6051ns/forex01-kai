@@ -116,7 +116,7 @@ python scripts/import_histdata_sec1.py \
     --end-year 2002
 
 # 確認：Parquetファイルが生成されているか
-ls data/sec1_parquet/EURUSD_sec1_200207.parquet
+ls D:/forex01_data/sec1_parquet/EURUSD_sec1_200207.parquet
 ```
 
 #### 3-2. 日次スナップショット生成
@@ -125,7 +125,7 @@ ls data/sec1_parquet/EURUSD_sec1_200207.parquet
 # TK20スナップショット生成
 python scripts/generate_daily_snapshots.py \
     --currency EURUSD \
-    --parquet-root data/sec1_parquet \
+    --parquet-root D:/forex01_data/sec1_parquet \
     --output-root train/input/market
 
 # 確認：picked_timestamp_utc列が含まれているか

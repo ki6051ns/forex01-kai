@@ -3,6 +3,13 @@ sys.dont_write_bytecode = True
 import lib as lib
 from multiprocessing import Process
 import sys
+import os
+
+# Spot suffix切替（段階2：trainから新データ）
+spot_suffix = os.getenv("SPOT_SUFFIX", "")
+lib.init_spot_globals(spot_suffix)
+print(f"[RUN] SPOT_SUFFIX={spot_suffix!r}")
+
 LASTSIMULATIONPERIOD=2025
 
 def run_proc1():

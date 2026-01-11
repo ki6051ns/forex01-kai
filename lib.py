@@ -152,34 +152,56 @@ def loadForwardRate1w_TK20( ):
 def loadForwardRate1w_TK1630( ):
     return loadData(inputFile_ = "market/forward_rates_1w_tk1630.csv")
 
-def loadSpotRate_NY17(spot_suffix=""):
+def loadSpotRate_NY17(spot_suffix=None):
     """
     NY17のspotレートを読み込む
     
     Args:
         spot_suffix: ファイル名のサフィックス（例: "_from_sec1"）
-                    デフォルトは""（旧データ）
+                    Noneの場合は環境変数SPOT_SUFFIXを参照（デフォルトは""）
     
     Returns:
         spotレートのDataFrame
     """
-    return loadData(inputFile_ = f"market/spot_rates_ny17{spot_suffix}.csv")
+    if spot_suffix is None:
+        spot_suffix = os.getenv("SPOT_SUFFIX", "")
+    input_file = f"market/spot_rates_ny17{spot_suffix}.csv"
+    print(f"[SPOT] loading: {input_file}")
+    return loadData(inputFile_=input_file)
 
-def loadSpotRate_TK20(spot_suffix=""):
+def loadSpotRate_TK20(spot_suffix=None):
     """
     TK20のspotレートを読み込む
     
     Args:
         spot_suffix: ファイル名のサフィックス（例: "_from_sec1"）
-                    デフォルトは""（旧データ）
+                    Noneの場合は環境変数SPOT_SUFFIXを参照（デフォルトは""）
     
     Returns:
         spotレートのDataFrame
     """
-    return loadData(inputFile_ = f"market/spot_rates_tk20{spot_suffix}.csv")
+    if spot_suffix is None:
+        spot_suffix = os.getenv("SPOT_SUFFIX", "")
+    input_file = f"market/spot_rates_tk20{spot_suffix}.csv"
+    print(f"[SPOT] loading: {input_file}")
+    return loadData(inputFile_=input_file)
 
-def loadSpotRate_TK1630( ):
-    return loadData(inputFile_ = "market/spot_rates_tk1630.csv")
+def loadSpotRate_TK1630(spot_suffix=None):
+    """
+    TK1630のspotレートを読み込む
+    
+    Args:
+        spot_suffix: ファイル名のサフィックス（例: "_from_sec1"）
+                    Noneの場合は環境変数SPOT_SUFFIXを参照（デフォルトは""）
+    
+    Returns:
+        spotレートのDataFrame
+    """
+    if spot_suffix is None:
+        spot_suffix = os.getenv("SPOT_SUFFIX", "")
+    input_file = f"market/spot_rates_tk1630{spot_suffix}.csv"
+    print(f"[SPOT] loading: {input_file}")
+    return loadData(inputFile_=input_file)
 
 ########################################################################################3
 # MARKET UPDATE
@@ -273,38 +295,58 @@ FWDRATE_C_TK1630 = FWDRATE_TK1630[["start_time"]+ CURRENCY_C ]
 
 
 
-SPOTRATE_NY17 = loadSpotRate_NY17( )
-SPOTRATE_NY17 = SPOTRATE_NY17.rename(columns = {'date_time':'start_time'} )
-SPOTRATE_NY17 = SPOTRATE_NY17[ (SPOTRATE_NY17['start_time'].dt.hour == 17) & (SPOTRATE_NY17['start_time'].dt.weekday == 0 )  ].reset_index(drop= True)
-SPOTRATE_A_NY17 = SPOTRATE_NY17[["start_time"]+ CURRENCY_A ]
-SPOTRATE_B_NY17 = SPOTRATE_NY17[["start_time"]+ CURRENCY_B ]
-SPOTRATE_C_NY17 = SPOTRATE_NY17[["start_time"]+ CURRENCY_C ]
+def init_spot_globals(spot_suffix=None):
+    """
+    SPOTRATE_*グローバル変数を初期化/再構築する
+    
+    Args:
+        spot_suffix: ファイル名のサフィックス（例: "_from_sec1"）
+                    Noneの場合は環境変数SPOT_SUFFIXを参照（デフォルトは""）
+    
+    Note:
+        この関数はグローバル変数を変更するため、すべてのグローバル変数を明示的に宣言する必要があります。
+    """
+    global SPOTRATE_NY17, SPOTRATE_A_NY17, SPOTRATE_B_NY17, SPOTRATE_C_NY17
+    global SPOTRATE_NY17TK20, SPOTRATE_A_NY17TK20, SPOTRATE_B_NY17TK20, SPOTRATE_C_NY17TK20
+    global SPOTRATE_NY17TK1630, SPOTRATE_A_NY17TK1630, SPOTRATE_B_NY17TK1630, SPOTRATE_C_NY17TK1630
+    global SPOTRATE_TK20, SPOTRATE_A_TK20, SPOTRATE_B_TK20, SPOTRATE_C_TK20
+    global SPOTRATE_TK1630, SPOTRATE_A_TK1630, SPOTRATE_B_TK1630, SPOTRATE_C_TK1630
+    
+    SPOTRATE_NY17 = loadSpotRate_NY17(spot_suffix)
+    SPOTRATE_NY17 = SPOTRATE_NY17.rename(columns = {'date_time':'start_time'} )
+    SPOTRATE_NY17 = SPOTRATE_NY17[ (SPOTRATE_NY17['start_time'].dt.hour == 17) & (SPOTRATE_NY17['start_time'].dt.weekday == 0 )  ].reset_index(drop= True)
+    SPOTRATE_A_NY17 = SPOTRATE_NY17[["start_time"]+ CURRENCY_A ]
+    SPOTRATE_B_NY17 = SPOTRATE_NY17[["start_time"]+ CURRENCY_B ]
+    SPOTRATE_C_NY17 = SPOTRATE_NY17[["start_time"]+ CURRENCY_C ]
 
-SPOTRATE_NY17TK20 = SPOTRATE_NY17.copy()
-SPOTRATE_NY17TK20["start_time"] = SPOTRATE_NY17TK20["start_time"].map( lambda x : x + relativedelta(days = 1 ) + relativedelta( hours= 3 )  )
-SPOTRATE_A_NY17TK20 = SPOTRATE_NY17TK20[["start_time"]+ CURRENCY_A ]
-SPOTRATE_B_NY17TK20 = SPOTRATE_NY17TK20[["start_time"]+ CURRENCY_B ]
-SPOTRATE_C_NY17TK20 = SPOTRATE_NY17TK20[["start_time"]+ CURRENCY_C ]
+    SPOTRATE_NY17TK20 = SPOTRATE_NY17.copy()
+    SPOTRATE_NY17TK20["start_time"] = SPOTRATE_NY17TK20["start_time"].map( lambda x : x + relativedelta(days = 1 ) + relativedelta( hours= 3 )  )
+    SPOTRATE_A_NY17TK20 = SPOTRATE_NY17TK20[["start_time"]+ CURRENCY_A ]
+    SPOTRATE_B_NY17TK20 = SPOTRATE_NY17TK20[["start_time"]+ CURRENCY_B ]
+    SPOTRATE_C_NY17TK20 = SPOTRATE_NY17TK20[["start_time"]+ CURRENCY_C ]
 
-SPOTRATE_NY17TK1630 = SPOTRATE_NY17.copy()
-SPOTRATE_NY17TK1630["start_time"] = SPOTRATE_NY17TK1630["start_time"].map( lambda x : x + relativedelta(days = 1 ) - relativedelta( minutes= 30 )  )
-SPOTRATE_A_NY17TK1630 = SPOTRATE_NY17TK1630[["start_time"]+ CURRENCY_A ]
-SPOTRATE_B_NY17TK1630 = SPOTRATE_NY17TK1630[["start_time"]+ CURRENCY_B ]
-SPOTRATE_C_NY17TK1630 = SPOTRATE_NY17TK1630[["start_time"]+ CURRENCY_C ]
+    SPOTRATE_NY17TK1630 = SPOTRATE_NY17.copy()
+    SPOTRATE_NY17TK1630["start_time"] = SPOTRATE_NY17TK1630["start_time"].map( lambda x : x + relativedelta(days = 1 ) - relativedelta( minutes= 30 )  )
+    SPOTRATE_A_NY17TK1630 = SPOTRATE_NY17TK1630[["start_time"]+ CURRENCY_A ]
+    SPOTRATE_B_NY17TK1630 = SPOTRATE_NY17TK1630[["start_time"]+ CURRENCY_B ]
+    SPOTRATE_C_NY17TK1630 = SPOTRATE_NY17TK1630[["start_time"]+ CURRENCY_C ]
 
-SPOTRATE_TK20 = loadSpotRate_TK20( )
-SPOTRATE_TK20 = SPOTRATE_TK20.rename(columns = {'date_time':'start_time'} )
-SPOTRATE_TK20 = SPOTRATE_TK20[ (SPOTRATE_TK20['start_time'].dt.hour == 20) & (SPOTRATE_TK20['start_time'].dt.weekday == 1 )  ].reset_index(drop= True)
-SPOTRATE_A_TK20 = SPOTRATE_TK20[["start_time"]+ CURRENCY_A ]
-SPOTRATE_B_TK20 = SPOTRATE_TK20[["start_time"]+ CURRENCY_B ]
-SPOTRATE_C_TK20 = SPOTRATE_TK20[["start_time"]+ CURRENCY_C ]
+    SPOTRATE_TK20 = loadSpotRate_TK20(spot_suffix)
+    SPOTRATE_TK20 = SPOTRATE_TK20.rename(columns = {'date_time':'start_time'} )
+    SPOTRATE_TK20 = SPOTRATE_TK20[ (SPOTRATE_TK20['start_time'].dt.hour == 20) & (SPOTRATE_TK20['start_time'].dt.weekday == 1 )  ].reset_index(drop= True)
+    SPOTRATE_A_TK20 = SPOTRATE_TK20[["start_time"]+ CURRENCY_A ]
+    SPOTRATE_B_TK20 = SPOTRATE_TK20[["start_time"]+ CURRENCY_B ]
+    SPOTRATE_C_TK20 = SPOTRATE_TK20[["start_time"]+ CURRENCY_C ]
 
-SPOTRATE_TK1630 = loadSpotRate_TK1630( )
-SPOTRATE_TK1630 = SPOTRATE_TK1630.rename(columns = {'date_time':'start_time'} )
-SPOTRATE_TK1630 = SPOTRATE_TK1630[ (SPOTRATE_TK1630['start_time'].dt.hour == 16) & (SPOTRATE_TK1630['start_time'].dt.minute == 30 ) &(SPOTRATE_TK1630['start_time'].dt.weekday == 1 )  ].reset_index(drop= True)
-SPOTRATE_A_TK1630 = SPOTRATE_TK1630[["start_time"]+ CURRENCY_A ]
-SPOTRATE_B_TK1630 = SPOTRATE_TK1630[["start_time"]+ CURRENCY_B ]
-SPOTRATE_C_TK1630 = SPOTRATE_TK1630[["start_time"]+ CURRENCY_C ]
+    SPOTRATE_TK1630 = loadSpotRate_TK1630(spot_suffix)
+    SPOTRATE_TK1630 = SPOTRATE_TK1630.rename(columns = {'date_time':'start_time'} )
+    SPOTRATE_TK1630 = SPOTRATE_TK1630[ (SPOTRATE_TK1630['start_time'].dt.hour == 16) & (SPOTRATE_TK1630['start_time'].dt.minute == 30 ) &(SPOTRATE_TK1630['start_time'].dt.weekday == 1 )  ].reset_index(drop= True)
+    SPOTRATE_A_TK1630 = SPOTRATE_TK1630[["start_time"]+ CURRENCY_A ]
+    SPOTRATE_B_TK1630 = SPOTRATE_TK1630[["start_time"]+ CURRENCY_B ]
+    SPOTRATE_C_TK1630 = SPOTRATE_TK1630[["start_time"]+ CURRENCY_C ]
+
+# モジュール読み込み時の初期化（互換性維持）
+init_spot_globals()
 
 
 
@@ -367,14 +409,15 @@ POSITION_FUNCTIONS_C = POSITION_FUNCTIONS_A
 
 
 def performanceSummary(df_, column_ ) :
-    def mdd(vec_):
-        vec_ = list( vec_[ vec_.columns[1] ]) 
-        if len(vec_) <= 1 :
+    def mdd(pl_series):
+        # Seriesを受け取る（累積和済みのpl列）
+        pl_list = list(pl_series)
+        if len(pl_list) <= 1 :
             return 0 
         else: 
             dd_ = []
-            for i_ in range(len(vec_)-1 ):
-                dd_.append( min( vec_[i_+1 :] ) - vec_[i_]  ) 
+            for i_ in range(len(pl_list)-1 ):
+                dd_.append( min( pl_list[i_+1 :] ) - pl_list[i_]  ) 
             return min(dd_)
     
     def mdd2(vec_):
@@ -391,7 +434,8 @@ def performanceSummary(df_, column_ ) :
     df_ = df_.reset_index(drop=False)
     tmp_ = pd.DataFrame({"start_time": df_["start_time"],  "pl": df_[column_]}  ).dropna()
     tmp_["year"] = tmp_["start_time"].dt.year
-    smry_ = tmp_.groupby("year").agg(["sum", "mean","std" ]  )[["pl"]]
+    # pl列のみを集計対象に（datetime列を除外）
+    smry_ = tmp_.groupby("year")[["pl"]].agg(["sum", "mean","std"])
     smry_.columns = smry_.columns.droplevel(0)
     if smry_.isna().any()["std"]:
         smry_["sr"] = -float('inf') 
@@ -407,9 +451,9 @@ def performanceSummary(df_, column_ ) :
         sr_ = total_["mean"] / total_["std"] * np.sqrt(50)
         total_["sr"] = [ sr_[0]]
     tmp_["pl"] = tmp_["pl"].cumsum()
-    smry2_ = pd.DataFrame(tmp_[["year","pl"]] .groupby("year").apply(mdd) )
+    # Seriesに対してapplyし、to_frame()を使用
+    smry2_ = tmp_.groupby("year")["pl"].apply(mdd).rename("mdd").to_frame()
     smry_ = smry_.join(smry2_)
-    smry_ = smry_.rename( columns = {0 : "mdd" })
     smry_["sortino"] = smry_["sum"] / np.abs( smry_["mdd"]) 
     total_["mdd"] =  [mdd2(tmp_[["pl"]])]
     sortino_ = total_["sum"] / np.abs(total_["mdd"])
@@ -421,14 +465,15 @@ def performanceSummary(df_, column_ ) :
     return smry_
 
 def performanceSummary2(df_, column_ ) :
-    def mdd(vec_):
-        vec_ = list( vec_[ vec_.columns[1] ]) 
-        if len(vec_) <= 1 :
+    def mdd(pl_series):
+        # Seriesを受け取る（累積和済みのpl列）
+        pl_list = list(pl_series)
+        if len(pl_list) <= 1 :
             return 0 
         else: 
             dd_ = []
-            for i_ in range(len(vec_)-1 ):
-                dd_.append( min( vec_[i_+1 :] ) - vec_[i_]  ) 
+            for i_ in range(len(pl_list)-1 ):
+                dd_.append( min( pl_list[i_+1 :] ) - pl_list[i_]  ) 
             return min(dd_)
     
     def mdd2(vec_):
@@ -446,7 +491,8 @@ def performanceSummary2(df_, column_ ) :
     df_[column_] = df_[column_]* (df_[column_]+1).shift(1).fillna(1).cumprod()
     tmp_ = pd.DataFrame({"start_time": df_["start_time"],  "pl": df_[column_]}  ).dropna()
     tmp_["year"] = tmp_["start_time"].dt.year
-    smry_ = tmp_.groupby("year").agg(["sum", "mean","std" ]  )[["pl"]]
+    # pl列のみを集計対象に（datetime列を除外）
+    smry_ = tmp_.groupby("year")[["pl"]].agg(["sum", "mean","std"])
     smry_.columns = smry_.columns.droplevel(0)
     if smry_.isna().any()["std"]:
         smry_["sr"] = -float('inf') 
@@ -462,9 +508,9 @@ def performanceSummary2(df_, column_ ) :
         sr_ = total_["mean"] / total_["std"] * np.sqrt(50)
         total_["sr"] = [ sr_[0]]
     tmp_["pl"] = tmp_["pl"].cumsum()
-    smry2_ = pd.DataFrame(tmp_[["year","pl"]] .groupby("year").apply(mdd) )
+    # Seriesに対してapplyし、to_frame()を使用
+    smry2_ = tmp_.groupby("year")["pl"].apply(mdd).rename("mdd").to_frame()
     smry_ = smry_.join(smry2_)
-    smry_ = smry_.rename( columns = {0 : "mdd" })
     smry_["sortino"] = smry_["sum"] / np.abs( smry_["mdd"]) 
     total_["mdd"] =  [mdd2(tmp_[["pl"]])]
     sortino_ = total_["sum"] / np.abs(total_["mdd"])
@@ -829,10 +875,9 @@ def simulateIndividualStrategyForSim(factorReturns_, in_, out_, n_ ,weight_,posi
     date_df["trade_fst_start_time"] = my_factorReturns_["start_time"]
 
     # rollingする前に数値列のみを選択（datetime列を除外）
-    numeric_cols = my_factorReturns_.select_dtypes(include=[np.number]).columns.tolist()
-    if 'start_time' in numeric_cols:
-        numeric_cols.remove('start_time')
-    my_sr_ = my_factorReturns_.set_index("start_time")[numeric_cols].rolling(in_-1 ).mean().shift(2).dropna()
+    # end_time（datetime64）が混ざるとrolling().mean()でエラーになるため、数値列のみを選択
+    tmp_for_sr = my_factorReturns_.set_index("start_time").select_dtypes(include=[np.number])
+    my_sr_ = tmp_for_sr.rolling(in_-1 ).mean().shift(2).dropna()
     ref_mean_vals= my_sr_.reset_index().copy()
     ref_mean_vals = pd.merge(ref_mean_vals, date_df, on = "start_time",how ="left")
     #ref_mean_vals= my_sr_.reset_index() >> mutate(start_time = my_sr_.index) >> left_join(date_df, by = "start_time") >> select(X.start_time, X.ref_last_start_time, X.ref_last_end_time, X.trade_fst_start_time, everything())
@@ -893,7 +938,7 @@ def simulateIndividualStrategyForSim(factorReturns_, in_, out_, n_ ,weight_,posi
         rslt_ = tmp_result
     else:
         rslt_ = pd.concat([rslt_, tmp_result]) 
-    rslt_["total"]  = rslt_.sum(axis= 1)
+    rslt_["total"]  = rslt_.select_dtypes(include=[np.number]).sum(axis= 1)
     
     return rslt_, retWeight_
 
@@ -926,10 +971,9 @@ def simulateIndividualStrategyForProd(factorReturns_, in_, out_, n_ ,weight_,pos
     date_df["trade_fst_start_time"] = my_factorReturns_["start_time"]
 
     # rollingする前に数値列のみを選択（datetime列を除外）
-    numeric_cols = my_factorReturns_.select_dtypes(include=[np.number]).columns.tolist()
-    if 'start_time' in numeric_cols:
-        numeric_cols.remove('start_time')
-    my_sr_ = my_factorReturns_.set_index("start_time")[numeric_cols].rolling(in_-1 ).mean().shift(2).dropna()
+    # end_time（datetime64）が混ざるとrolling().mean()でエラーになるため、数値列のみを選択
+    tmp_for_sr = my_factorReturns_.set_index("start_time").select_dtypes(include=[np.number])
+    my_sr_ = tmp_for_sr.rolling(in_-1 ).mean().shift(2).dropna()
     ref_mean_vals= my_sr_.reset_index().copy()
     ref_mean_vals = pd.merge(ref_mean_vals, date_df, on = "start_time",how ="left")
     #ref_mean_vals= my_sr_.reset_index() >> mutate(start_time = my_sr_.index) >> left_join(date_df, by = "start_time") >> select(X.start_time, X.ref_last_start_time, X.ref_last_end_time, X.trade_fst_start_time, everything())
@@ -986,7 +1030,7 @@ def simulateIndividualStrategyForProd(factorReturns_, in_, out_, n_ ,weight_,pos
         rslt_ = tmp_result
     else:
         rslt_ = pd.concat([rslt_, tmp_result]) 
-    rslt_["total"]  = rslt_.sum(axis= 1)
+    rslt_["total"]  = rslt_.select_dtypes(include=[np.number]).sum(axis= 1)
     
     return rslt_, retWeight_
 
@@ -1231,6 +1275,9 @@ def testForSim(  calculateFactorReturn , calculateFactorReturn2 ,simulationPerio
                 except:
                     pass
                 
+        if len(df_) == 0 or 'start_time' not in df_.columns:
+            raise ValueError(f"No valid CSV files found for {outputName_}. Check if strategy results were generated.")
+        
         df_["start_time"] = pd.to_datetime(df_["start_time"])
         df_["total"] = list( df_.set_index("start_time").mean(axis=1))
         
@@ -1391,6 +1438,9 @@ def testForProd(  calculateFactorReturn , calculateFactorReturn2 ,simulationPeri
                 except:
                     pass
                 
+        if len(df_) == 0 or 'start_time' not in df_.columns:
+            raise ValueError(f"No valid CSV files found for {outputName_}. Check if A/B/C strategy results (test_result_NY17NY17_NY17NY17_NY17TK1630_*_lag=*.csv) were generated.")
+        
         df_["start_time"] = pd.to_datetime(df_["start_time"])
         df_["total"] = list( df_.set_index("start_time").mean(axis=1))
         
